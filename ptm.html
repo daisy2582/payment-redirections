@@ -58,7 +58,7 @@
   var paytmScheme = 'paytmmp://pay?' + upiParams;
   var upiLink = 'upi://pay?' + upiParams;
   var intentPaytm = 'intent://pay?' + upiParams +
-    '#Intent;scheme=upi;package=net.one97.paytm;' +
+    '#Intent;scheme=paytmmp;package=net.one97.paytm;' +
     'S.browser_fallback_url=' + fallbackUrl + ';end';
   var intentUpi = 'intent://pay?' + upiParams +
     '#Intent;scheme=upi;' +

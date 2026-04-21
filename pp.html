@@ -58,7 +58,7 @@
   var phonepeScheme = 'phonepe://pay?' + upiParams;
   var upiLink = 'upi://pay?' + upiParams;
   var intentPhonepe = 'intent://pay?' + upiParams +
-    '#Intent;scheme=upi;package=com.phonepe.app;' +
+    '#Intent;scheme=phonepe;package=com.phonepe.app;' +
     'S.browser_fallback_url=' + fallbackUrl + ';end';
   var intentUpi = 'intent://pay?' + upiParams +
     '#Intent;scheme=upi;' +
