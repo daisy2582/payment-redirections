@@ -20,40 +20,28 @@
 </style>
 <script>
   var p = new URLSearchParams(window.location.search);
-  var phone = p.get('ph') || '9876854530';
-  var name = p.get('pn') || 'Dharmanth Enterprises';
   var vpa = p.get('vpa') || 'Gpay-12200742275@okbizaxis';
+  var name = p.get('pn') || 'Dharmanth Enterprises';
   var am = p.get('am') || '1';
-  var amPaise = Math.round(parseFloat(am) * 100);
 
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  // PhonePe native chat deep link (Android) — from phonepe-redirection reference
-  var data = {
-    contactInfo: { type: "PHONE", name: name, phoneNumber: phone, isOnPhonePe: true, isUpiEnabled: true, hasExternalVpa: false },
-    withSheetExpanded: true,
-    shouldShowUnsavedBanner: false,
-    shouldAutoShowKeyboard: true,
-    initialTab: "SEND",
-    sendParams: { initialAmount: amPaise, note: "Payment" },
-    validateDestination: false
-  };
-  var b64 = btoa(JSON.stringify(data));
-  var nativeLink = 'phonepe://native?id=p2pContactChat&data=' + b64;
-  var appLink = 'https://www.phonepe.com/applink?landing_page=' + encodeURIComponent(nativeLink);
-  var intentLink = 'intent://native?id=p2pContactChat&data=' + b64 + '#Intent;scheme=phonepe;package=com.phonepe.app;end';
+  var upiParams = 'pa=' + encodeURIComponent(vpa) +
+    '&pn=' + encodeURIComponent(name) +
+    '&am=' + parseFloat(am).toFixed(2) +
+    '&cu=INR' +
+    '&tn=Payment';
 
-  // iOS fallbacks: use UPI pay format with VPA (or phone@ybl if no VPA)
-  var upiTarget = vpa || (phone + '@ybl');
-  var iosPayLink = 'phonepe://pay?pa=' + encodeURIComponent(upiTarget) + '&pn=' + encodeURIComponent(name) + '&am=' + am + '&tn=Payment&cu=INR';
-  var iosUniversalLink = 'https://phon.pe/pay?pa=' + encodeURIComponent(upiTarget) + '&pn=' + encodeURIComponent(name) + '&am=' + am + '&tn=Payment&cu=INR';
-  var iosUpiLink = 'upi://pay?pa=' + encodeURIComponent(upiTarget) + '&pn=' + encodeURIComponent(name) + '&am=' + am + '&tn=Payment&cu=INR';
+  var phonepePay = 'phonepe://pay?' + upiParams;
+  var phonepeUniversal = 'https://phon.pe/pay?' + upiParams;
+  var upiGeneric = 'upi://pay?' + upiParams;
+  var intentPay = 'intent://pay?' + upiParams + '#Intent;scheme=phonepe;package=com.phonepe.app;end';
 
   var links;
   if (isIOS) {
-    links = [iosPayLink, iosUniversalLink, iosUpiLink];
+    links = [phonepePay, phonepeUniversal, upiGeneric];
   } else {
-    links = [intentLink, nativeLink, appLink];
+    links = [intentPay, phonepePay, upiGeneric];
   }
 
   function openLink(url) {
@@ -101,7 +89,7 @@
       document.getElementById('btn3').textContent = 'Open via UPI';
     } else {
       document.getElementById('btn2').textContent = 'Try Direct';
-      document.getElementById('btn3').textContent = 'Try App Link';
+      document.getElementById('btn3').textContent = 'Open via UPI';
     }
   };
 </script>
@@ -116,7 +104,7 @@
   <div id="buttons" class="hidden">
     <a class="btn btn-primary" href="#" onclick="tryOpen(0);return false;">Open PhonePe</a>
     <a class="btn btn-secondary" href="#" onclick="tryOpen(1);return false;" id="btn2">Try Direct</a>
-    <a class="btn btn-secondary" href="#" onclick="tryOpen(2);return false;" id="btn3">Try App Link</a>
+    <a class="btn btn-secondary" href="#" onclick="tryOpen(2);return false;" id="btn3">Open via UPI</a>
   </div>
 </div>
 </body>

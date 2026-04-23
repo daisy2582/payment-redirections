@@ -20,28 +20,34 @@
 </style>
 <script>
   var p = new URLSearchParams(window.location.search);
-  var phone = p.get('ph') || '9876854530';
-  var name = p.get('pn') || 'Dharmanth Enterprises';
   var vpa = p.get('vpa') || 'Gpay-12200742275@okbizaxis';
+  var name = p.get('pn') || 'Dharmanth Enterprises';
   var am = p.get('am') || '1';
 
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  var payVpa = vpa || (phone + '@paytm');
-  var upiParams = 'pa=' + encodeURIComponent(payVpa) + '&pn=' + encodeURIComponent(name) + '&am=' + am + '&tn=Payment&cu=INR';
+  // UPI pay with merchant flags (from decompiled Paytm APK — QuickPaymentActivity uses am= not amount=)
+  var txnRef = 'TXN' + Date.now() + Math.floor(Math.random() * 1000);
+  var upiParams = 'pa=' + encodeURIComponent(vpa) +
+    '&pn=' + encodeURIComponent(name) +
+    '&am=' + parseFloat(am).toFixed(2) +
+    '&cu=INR' +
+    '&mode=02' +
+    '&mc=0000' +
+    '&tr=' + txnRef +
+    '&tn=Payment';
 
-  var links = [];
+  var paytmPay = 'paytmmp://pay?' + upiParams;
+  var paytmMoneyTransfer = 'paytmmp://cash_wallet?featuretype=money_transfer&pa=' + encodeURIComponent(vpa) + '&pn=' + encodeURIComponent(name) + '&am=' + am;
+  var upiGeneric = 'upi://pay?' + upiParams;
+  var intentPay = 'intent://pay?' + upiParams + '#Intent;scheme=paytmmp;package=net.one97.paytm;end';
 
+  var links;
   if (isIOS) {
-    links.push('paytmmp://pay?' + upiParams);
-    links.push('upi://pay?' + upiParams);
+    links = [paytmPay, upiGeneric];
   } else {
-    // Android: Direct send money (skips profile card)
-    links.push('paytmmp://cash_wallet?featuretype=sendmoneymobile&recipient=' + phone + '&amount=' + am);
-    // Android: Chat with amount
-    links.push('paytmmp://chat?featuretype=start_chat&phone=' + phone + '&phoneName=' + encodeURIComponent(name) + '&amount=' + am + '&source=deeplink');
-    // Android: Intent fallback
-    links.push('intent://cash_wallet?featuretype=sendmoneymobile&recipient=' + phone + '&amount=' + am + '#Intent;scheme=paytmmp;package=net.one97.paytm;end');
+    // Android cascade: Paytm UPI intent → money_transfer send screen → generic UPI
+    links = [intentPay, paytmMoneyTransfer, upiGeneric];
   }
 
   function openLink(url) {
