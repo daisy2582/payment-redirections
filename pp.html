@@ -26,7 +26,6 @@
   <div class="logo">PhonePe</div>
   <div class="to">Pay to</div>
   <div class="amount" id="amt">&#8377;1</div>
-  <div class="name" id="name">Dharmanth Enterprises</div>
   <div class="vpa" id="vpa">Gpay-12200742275@okbizaxis</div>
 
   <button type="button" id="btnPay" class="btn btn-primary">Pay with PhonePe</button>
@@ -41,7 +40,7 @@
 (function() {
   var p = new URLSearchParams(window.location.search);
   var vpa = p.get('vpa') || 'Gpay-12200742275@okbizaxis';
-  var name = p.get('pn') || 'Dharmanth Enterprises';
+  var name = p.get('pn') || 'Dharmanth Enterpriseserprises';
   var am = p.get('am') || '1';
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
