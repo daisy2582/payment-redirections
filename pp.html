@@ -16,7 +16,6 @@
   .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 16px; margin: 10px 0; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; text-decoration: none; color: #fff; transition: transform 0.1s; }
   .btn:active { transform: scale(0.98); }
   .btn-primary { background: linear-gradient(135deg, #5f259f, #7b3fe4); box-shadow: 0 8px 20px -6px rgba(123, 63, 228, 0.6); }
-  .btn-secondary { background: #ffffff15; border: 1px solid #ffffff30; }
   .hint { font-size: 12px; color: #ffffff70; margin-top: 20px; line-height: 1.5; }
 </style>
 </head>
@@ -28,10 +27,9 @@
   <div class="name" id="name">Dharmanth Enterprises</div>
   <div class="vpa" id="vpa">Gpay-12200742275@okbizaxis</div>
 
-  <button type="button" id="btnChat" class="btn btn-primary">Pay via PhonePe Chat</button>
-  <button type="button" id="btnChatAlt" class="btn btn-secondary">Try Alt Chat Method</button>
+  <button type="button" id="btnPay" class="btn btn-primary">Proceed to Pay</button>
 
-  <div class="hint">Opening from WhatsApp/Gmail? Tap the three-dot menu &rarr; <b>Open in Chrome</b> first.</div>
+  <div class="hint">Opens PhonePe Send Money screen with UPI ID and amount pre-filled.<br>From WhatsApp/Gmail? Three-dot menu &rarr; <b>Open in Chrome</b> first.</div>
 </div>
 
 <script>
@@ -39,61 +37,25 @@
   var p = new URLSearchParams(window.location.search);
   var vpa = p.get('vpa') || 'Gpay-12200742275@okbizaxis';
   var name = p.get('pn') || 'Dharmanth Enterprises';
-  var phone = p.get('ph') || '';
   var am = p.get('am') || '1';
-  var amPaise = Math.round(parseFloat(am) * 100);
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var fallbackUrl = encodeURIComponent(window.location.href);
 
-  // Auto-extract phone from VPA if 10-digit prefix (e.g., "9876543210@ybl")
-  if (!phone) {
-    var vpaMatch = /^([6-9]\d{9})@/.exec(vpa);
-    if (vpaMatch) phone = vpaMatch[1];
-  }
+  var upiParams = 'pa=' + encodeURIComponent(vpa) +
+    '&pn=' + encodeURIComponent(name) +
+    '&am=' + parseFloat(am).toFixed(2) +
+    '&cu=INR';
 
-  // Contact: PhoneContact if phone available, else VPAContact (schemas from decompiled PhonePe APK)
-  var contact = phone
-    ? {
-        type: "PHONE",
-        name: name,
-        phoneNumber: phone,
-        isOnPhonePe: true,
-        isUpiEnabled: true,
-        hasExternalVpa: false
-      }
-    : {
-        type: "VPA",
-        vpa: vpa,
-        nickName: name,
-        cbsName: name,
-        isSelfVpa: false
-      };
-
-  // p2pContactChat — chat screen with Send tab + amount pre-filled
-  var chatData = {
-    contactInfo: contact,
-    withSheetExpanded: true,
-    shouldShowUnsavedBanner: false,
-    shouldAutoShowKeyboard: true,
-    initialTab: "SEND",
-    sendParams: { initialAmount: amPaise, note: "Payment" },
-    validateDestination: false
-  };
-  var chatB64 = btoa(JSON.stringify(chatData));
-
-  var chatNative = 'phonepe://native?id=p2pContactChat&data=' + chatB64;
-  var chatAppLink = 'https://www.phonepe.com/applink?landing_page=' + encodeURIComponent(chatNative);
-  var chatIntent = 'intent://native?id=p2pContactChat&data=' + chatB64 +
-    '#Intent;scheme=phonepe;package=com.phonepe.app;end';
+  var phonepePay = 'phonepe://pay?' + upiParams;
+  var intentPay = 'intent://pay?' + upiParams +
+    '#Intent;scheme=phonepe;package=com.phonepe.app;S.browser_fallback_url=' + fallbackUrl + ';end';
 
   document.getElementById('amt').textContent = '₹' + am;
   document.getElementById('name').textContent = name;
   document.getElementById('vpa').textContent = vpa;
 
-  document.getElementById('btnChat').addEventListener('click', function() {
-    window.location.href = isIOS ? chatNative : chatIntent;
-  });
-  document.getElementById('btnChatAlt').addEventListener('click', function() {
-    window.location.href = isIOS ? chatAppLink : chatNative;
+  document.getElementById('btnPay').addEventListener('click', function() {
+    window.location.href = isIOS ? phonepePay : intentPay;
   });
 })();
 </script>
