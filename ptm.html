@@ -28,14 +28,14 @@
   <div class="amount" id="amt">&#8377;1</div>
   <div class="target" id="target">Gpay-12200742275@okbizaxis</div>
 
-  <a href="#" id="btnChat" class="btn btn-primary">Pay via Paytm VPA Chat</a>
-  <a href="#" id="btnDirect" class="btn btn-secondary">Direct Send Money</a>
+  <a href="#" id="btnPrimary" class="btn btn-primary">Send Money via Paytm</a>
+  <a href="#" id="btnChat" class="btn btn-secondary">Try VPA Chat</a>
   <a href="#" id="btnUpi" class="btn btn-secondary">UPI Pay (fallback)</a>
 
   <div class="note">
-    <b>Chat:</b> opens Paytm's VPA chat with amount.<br>
-    <b>Direct:</b> opens <code>cash_wallet/money_transfer</code> — skips chat profile card.<br>
-    <b>UPI Pay:</b> standard send screen.
+    <b>Send Money:</b> opens Paytm's Send Money UPI screen — VPA and amount pre-filled.<br>
+    <b>VPA Chat:</b> tries Paytm's chat flow (may not work with merchant VPA).<br>
+    <b>UPI Pay:</b> standard UPI intent.
   </div>
   <div class="hint">Opening from WhatsApp/Gmail? Tap the three-dot menu &rarr; <b>Open in Chrome</b> first.</div>
 </div>
@@ -43,23 +43,24 @@
 <script>
   var p = new URLSearchParams(window.location.search);
   var vpa = p.get('vpa') || 'Gpay-12200742275@okbizaxis';
-  var name = p.get('pn') || 'UPI Payment';
+  var name = p.get('pn') || 'Dharmanth Enterprises';
   var am = p.get('am') || '1';
 
   var fallbackUrl = encodeURIComponent(window.location.href);
 
-  // VPA chat deeplink (from decompiled Paytm APK - ChatDeepLinkHandler)
+  // Send Money to UPI ID — amount + VPA + name pre-filled (from decompiled QuickPaymentActivity.java)
+  var directSendLink = 'paytmmp://cash_wallet?featuretype=money_transfer' +
+    '&pa=' + encodeURIComponent(vpa) +
+    '&pn=' + encodeURIComponent(name) +
+    '&amount=' + am;
+
+  // VPA Chat — may or may not resolve depending on VPA type (from DiscoverySearchProvider.java)
   var chatLink = 'paytmmp://chat?featuretype=start_chat' +
     '&userType=VPA' +
     '&vpa=' + encodeURIComponent(vpa) +
     '&txnCategory=VPA2VPA' +
     '&amount=' + am +
     '&source=deeplink';
-
-  // Direct pay deeplink (from decompiled Paytm APK - QuickPaymentActivity)
-  var directPayLink = 'paytmmp://cash_wallet?featuretype=money_transfer' +
-    '&pa=' + encodeURIComponent(vpa) +
-    '&pn=' + encodeURIComponent(name);
 
   // UPI pay fallback
   var upiParams = 'pa=' + encodeURIComponent(vpa) +
@@ -73,8 +74,8 @@
   document.getElementById('amt').textContent = '₹' + am;
   document.getElementById('target').textContent = vpa;
 
+  document.getElementById('btnPrimary').href = directSendLink;
   document.getElementById('btnChat').href = chatLink;
-  document.getElementById('btnDirect').href = directPayLink;
 
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   document.getElementById('btnUpi').href = isIOS ? paytmPay : intentPay;
