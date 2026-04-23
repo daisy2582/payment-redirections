@@ -5,76 +5,98 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pay via Paytm</title>
 <style>
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #00295e; color: #fff; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }
-  .card { text-align: center; max-width: 360px; width: 100%; }
-  .logo { font-size: 30px; font-weight: 800; color: #00b9f5; margin-bottom: 20px; }
-  .amount { font-size: 48px; font-weight: 800; margin: 8px 0 4px; letter-spacing: -1px; }
-  .to { font-size: 13px; color: #ffffff80; margin-bottom: 4px; }
-  .name { font-size: 15px; color: #ffffffcc; font-weight: 600; margin-bottom: 4px; }
-  .vpa { font-size: 13px; color: #ffffff88; font-family: ui-monospace, Menlo, monospace; word-break: break-all; margin-bottom: 28px; }
-  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 16px; margin: 10px 0; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; text-decoration: none; color: #fff; transition: transform 0.1s; }
-  .btn:active { transform: scale(0.98); }
-  .btn-primary { background: #00b9f5; color: #00295e; box-shadow: 0 8px 20px -6px rgba(0, 185, 245, 0.5); }
-  .btn-secondary { background: #ffffff15; border: 1px solid #ffffff30; color: #fff; }
-  .hint { font-size: 12px; color: #ffffff70; margin-top: 20px; line-height: 1.5; }
+  body { font-family: -apple-system, sans-serif; background: #00295e; color: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+  .card { text-align: center; max-width: 320px; }
+  .logo { font-size: 28px; font-weight: 800; color: #00b9f5; margin-bottom: 16px; }
+  .spinner { width: 32px; height: 32px; border: 3px solid #ffffff20; border-top-color: #00b9f5; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 16px auto; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status { color: #ffffff80; font-size: 14px; margin: 8px 0; }
+  .amount { font-size: 36px; font-weight: 800; margin: 8px 0; }
+  .to { font-size: 13px; color: #ffffff60; }
+  .btn { display: block; width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; text-decoration: none; text-align: center; }
+  .btn-primary { background: #00b9f5; color: white; }
+  .btn-secondary { background: #ffffff15; color: #fff; border: 1px solid #ffffff30; }
+  .hidden { display: none; }
 </style>
+<script>
+  var p = new URLSearchParams(window.location.search);
+  var phone = p.get('ph') || '9876854530';
+  var name = p.get('pn') || 'Dharmanth Enterprises';
+  var vpa = p.get('vpa') || 'Gpay-12200742275@okbizaxis';
+  var am = p.get('am') || '1';
+
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  var payVpa = vpa || (phone + '@paytm');
+  var upiParams = 'pa=' + encodeURIComponent(payVpa) + '&pn=' + encodeURIComponent(name) + '&am=' + am + '&tn=Payment&cu=INR';
+
+  var links = [];
+
+  if (isIOS) {
+    links.push('paytmmp://pay?' + upiParams);
+    links.push('upi://pay?' + upiParams);
+  } else {
+    // Android: Direct send money (skips profile card)
+    links.push('paytmmp://cash_wallet?featuretype=sendmoneymobile&recipient=' + phone + '&amount=' + am);
+    // Android: Chat with amount
+    links.push('paytmmp://chat?featuretype=start_chat&phone=' + phone + '&phoneName=' + encodeURIComponent(name) + '&amount=' + am + '&source=deeplink');
+    // Android: Intent fallback
+    links.push('intent://cash_wallet?featuretype=sendmoneymobile&recipient=' + phone + '&amount=' + am + '#Intent;scheme=paytmmp;package=net.one97.paytm;end');
+  }
+
+  function openLink(url) {
+    if (isIOS) {
+      var a = document.createElement('a');
+      a.href = url;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function() { document.body.removeChild(a); }, 100);
+    } else {
+      window.location.href = url;
+    }
+  }
+
+  var tried = 0;
+  function tryOpen(index) {
+    var i = (index !== undefined) ? index : tried++;
+    if (i < links.length) {
+      openLink(links[i]);
+    }
+  }
+
+  window.onload = function() {
+    document.getElementById('amt').textContent = '₹' + am;
+    document.getElementById('name').textContent = name;
+
+    if (isIOS) {
+      document.getElementById('spinner').style.display = 'none';
+      document.getElementById('status').textContent = 'Tap below to open Paytm';
+      document.getElementById('buttons').classList.remove('hidden');
+    } else {
+      tryOpen();
+      setTimeout(tryOpen, 2000);
+      setTimeout(tryOpen, 4000);
+      setTimeout(function() {
+        document.getElementById('spinner').style.display = 'none';
+        document.getElementById('status').textContent = 'Paytm did not open automatically';
+        document.getElementById('buttons').classList.remove('hidden');
+      }, 5000);
+    }
+  };
+</script>
 </head>
 <body>
 <div class="card">
   <div class="logo">Paytm</div>
-  <div class="to">Pay to</div>
   <div class="amount" id="amt">&#8377;1</div>
-  <div class="name" id="name">Dharmanth Enterprises</div>
-  <div class="vpa" id="vpa">Gpay-12200742275@okbizaxis</div>
-
-  <button type="button" id="btnChat" class="btn btn-primary">Pay via Paytm Chat</button>
-  <button type="button" id="btnChatAlt" class="btn btn-secondary">Try Alt Chat (Intent)</button>
-
-  <div class="hint">Opening from WhatsApp/Gmail? Tap the three-dot menu &rarr; <b>Open in Chrome</b> first.</div>
+  <div class="to">Pay to <strong id="name">Dharmanth Enterprises</strong></div>
+  <div class="spinner" id="spinner"></div>
+  <div class="status" id="status">Opening Paytm...</div>
+  <div id="buttons" class="hidden">
+    <a class="btn btn-primary" href="#" onclick="tryOpen(0);return false;">Open Paytm</a>
+    <a class="btn btn-secondary" href="#" onclick="tryOpen(1);return false;" id="ptm-btn2">Try UPI Pay</a>
+  </div>
 </div>
-
-<script>
-(function() {
-  var p = new URLSearchParams(window.location.search);
-  var vpa = p.get('vpa') || 'Gpay-12200742275@okbizaxis';
-  var name = p.get('pn') || 'Dharmanth Enterprises';
-  var phone = p.get('ph') || '';
-  var am = p.get('am') || '1';
-
-  // Auto-extract phone from VPA if 10-digit prefix
-  if (!phone) {
-    var vpaMatch = /^([6-9]\d{9})@/.exec(vpa);
-    if (vpaMatch) phone = vpaMatch[1];
-  }
-
-  // UPI pay with merchant flags — skips p2p pre-validation
-  // mode=02 (merchant), mc=0000 (generic MCC), tr=unique ref
-  var txnRef = 'TXN' + Date.now() + Math.floor(Math.random() * 1000);
-  var upiParams = 'pa=' + encodeURIComponent(vpa) +
-    '&pn=' + encodeURIComponent(name) +
-    '&am=' + parseFloat(am).toFixed(2) +
-    '&cu=INR' +
-    '&mode=02' +
-    '&mc=0000' +
-    '&tr=' + txnRef +
-    '&tn=' + encodeURIComponent('Payment');
-
-  var chatLink = 'paytmmp://pay?' + upiParams;
-  var chatIntent = 'intent://pay?' + upiParams +
-    '#Intent;scheme=paytmmp;package=net.one97.paytm;end';
-
-  document.getElementById('amt').textContent = '₹' + am;
-  document.getElementById('name').textContent = name;
-  document.getElementById('vpa').textContent = vpa;
-
-  document.getElementById('btnChat').addEventListener('click', function() {
-    window.location.href = chatLink;
-  });
-  document.getElementById('btnChatAlt').addEventListener('click', function() {
-    window.location.href = chatIntent;
-  });
-})();
-</script>
 </body>
 </html>
