@@ -16,7 +16,6 @@
   .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 16px; margin: 10px 0; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; text-decoration: none; color: #fff; transition: transform 0.1s; }
   .btn:active { transform: scale(0.98); }
   .btn-primary { background: #4285F4; box-shadow: 0 8px 20px -6px rgba(66, 133, 244, 0.6); }
-  .btn-secondary { background: #ffffff15; border: 1px solid #ffffff30; }
   .hint { font-size: 12px; color: #ffffff70; margin-top: 20px; line-height: 1.5; }
 </style>
 </head>
@@ -28,10 +27,9 @@
   <div class="name" id="name">Dharmanth Enterprises</div>
   <div class="vpa" id="vpa">Gpay-12200742275@okbizaxis</div>
 
-  <button type="button" id="btnCopy" class="btn btn-secondary">Copy UPI ID</button>
-  <button type="button" id="btnPay" class="btn btn-primary">Open Google Pay</button>
+  <button type="button" id="btnPay" class="btn btn-primary">Pay with Google Pay</button>
 
-  <div class="hint">Tap <b>Copy UPI ID</b> → <b>Open Google Pay</b> → tap Pay UPI ID → paste → enter ₹1 → pay.<br>Opening from WhatsApp/Gmail? Three-dot menu &rarr; <b>Open in Chrome</b> first.</div>
+  <div class="hint">Opening from WhatsApp/Gmail? Three-dot menu &rarr; <b>Open in Chrome</b> first.</div>
 </div>
 
 <script>
@@ -42,34 +40,32 @@
   var am = p.get('am') || '1';
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  // Launch GPay — use UPI pay URL with empty params as the opener (guaranteed to open GPay
-  // since it's a BROWSABLE intent-filter in their manifest). VPA stays empty so no validation triggers.
-  var androidLaunch = 'intent://upi/pay#Intent;scheme=gpay;package=com.google.android.apps.nbu.paisa.user;end';
-  var iosLaunch = 'tez://upi/pay';
+  // UPI pay with merchant flags — skips p2p pre-validation
+  // mode=02 (merchant), mc=0000 (generic MCC), tr=unique ref
+  var txnRef = 'TXN' + Date.now() + Math.floor(Math.random() * 1000);
+  var upiParams = 'pa=' + encodeURIComponent(vpa) +
+    '&pn=' + encodeURIComponent(name) +
+    '&am=' + parseFloat(am).toFixed(2) +
+    '&cu=INR' +
+    '&mode=02' +
+    '&mc=0000' +
+    '&tr=' + txnRef +
+    '&tn=' + encodeURIComponent('Payment');
+
+  // GPay registers: gpay://upi/pay (current), tez://upi/pay (legacy iOS)
+  var gpayScheme = 'gpay://upi/pay?' + upiParams;
+  var tezScheme = 'tez://upi/pay?' + upiParams;
+  var intentPay = 'intent://upi/pay?' + upiParams +
+    '#Intent;scheme=gpay;package=com.google.android.apps.nbu.paisa.user;end';
 
   document.getElementById('amt').textContent = '₹' + am;
   document.getElementById('name').textContent = name;
   document.getElementById('vpa').textContent = vpa;
 
   document.getElementById('btnPay').addEventListener('click', function() {
-    window.location.href = isIOS ? iosLaunch : androidLaunch;
-  });
-
-  document.getElementById('btnCopy').addEventListener('click', function() {
-    var t = document.createElement('textarea');
-    t.value = vpa;
-    document.body.appendChild(t);
-    t.select();
-    try { document.execCommand('copy'); } catch (e) {}
-    if (navigator.clipboard) navigator.clipboard.writeText(vpa).catch(function() {});
-    document.body.removeChild(t);
-    var btn = document.getElementById('btnCopy');
-    var orig = btn.textContent;
-    btn.textContent = '✓ Copied — now open GPay';
-    setTimeout(function() { btn.textContent = orig; }, 2000);
+    window.location.href = isIOS ? tezScheme : intentPay;
   });
 })();
-
 </script>
 </body>
 </html>
