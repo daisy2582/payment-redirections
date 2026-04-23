@@ -45,10 +45,8 @@
   var am = p.get('am') || '1';
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  // Note: NOT sending 'pn' in the URL. Axis Bank returns the canonical registered name
-  // during UPI verify. If our URL's pn mismatches (e.g. "Dharmanth Enterprises" vs bank's "Dharmanth"),
-  // PhonePe's fraud engine flags it as a mismatch → "unable to proceed".
   var upiParams = 'pa=' + encodeURIComponent(vpa) +
+    '&pn=' + encodeURIComponent(name) +
     '&am=' + parseFloat(am).toFixed(2) +
     '&cu=INR' +
     '&tn=Payment';

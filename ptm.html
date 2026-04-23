@@ -51,8 +51,8 @@
   // UPI pay with merchant flags — skips p2p pre-validation
   // mode=02 (merchant), mc=0000 (generic MCC), tr=unique ref
   var txnRef = 'TXN' + Date.now() + Math.floor(Math.random() * 1000);
-  // Skip 'pn' — rely on bank's canonical registered name to avoid mismatch fraud signal
   var upiParams = 'pa=' + encodeURIComponent(vpa) +
+    '&pn=' + encodeURIComponent(name) +
     '&am=' + parseFloat(am).toFixed(2) +
     '&cu=INR' +
     '&mode=02' +
