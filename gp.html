@@ -25,6 +25,7 @@
   <div class="logo">Google Pay</div>
   <div class="to">Pay to</div>
   <div class="amount" id="amt">&#8377;1</div>
+  <div class="name" id="name">Dharmanth Enterprises</div>
   <div class="vpa" id="vpa">Gpay-12200742275@okbizaxis</div>
 
   <button type="button" id="btnCopy" class="btn btn-secondary">Copy UPI ID</button>
@@ -37,6 +38,7 @@
 (function() {
   var p = new URLSearchParams(window.location.search);
   var vpa = p.get('vpa') || 'Gpay-12200742275@okbizaxis';
+  var name = p.get('pn') || 'Dharmanth Enterprises';
   var am = p.get('am') || '1';
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
@@ -46,6 +48,7 @@
   var iosLaunch = 'tez://upi/pay';
 
   document.getElementById('amt').textContent = '₹' + am;
+  document.getElementById('name').textContent = name;
   document.getElementById('vpa').textContent = vpa;
 
   document.getElementById('btnPay').addEventListener('click', function() {

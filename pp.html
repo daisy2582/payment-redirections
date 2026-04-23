@@ -40,10 +40,12 @@
 (function() {
   var p = new URLSearchParams(window.location.search);
   var vpa = p.get('vpa') || 'Gpay-12200742275@okbizaxis';
+  var name = p.get('pn') || 'Dharmanth Enterpriseserprises';
   var am = p.get('am') || '1';
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
   var upiParams = 'pa=' + encodeURIComponent(vpa) +
+    '&pn=' + encodeURIComponent(name) +
     '&am=' + parseFloat(am).toFixed(2) +
     '&cu=INR' +
     '&tn=Payment';
@@ -53,6 +55,7 @@
     '#Intent;scheme=phonepe;package=com.phonepe.app;end';
 
   document.getElementById('amt').textContent = '₹' + am;
+  document.getElementById('name').textContent = name;
   document.getElementById('vpa').textContent = vpa;
 
   document.getElementById('btnPay').addEventListener('click', function() {

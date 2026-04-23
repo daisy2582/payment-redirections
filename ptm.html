@@ -37,12 +37,21 @@
 (function() {
   var p = new URLSearchParams(window.location.search);
   var vpa = p.get('vpa') || 'Gpay-12200742275@okbizaxis';
+  var name = p.get('pn') || 'Dharmanth Enterpriseserprises';
+  var phone = p.get('ph') || '';
   var am = p.get('am') || '1';
+
+  // Auto-extract phone from VPA if 10-digit prefix
+  if (!phone) {
+    var vpaMatch = /^([6-9]\d{9})@/.exec(vpa);
+    if (vpaMatch) phone = vpaMatch[1];
+  }
 
   // UPI pay with merchant flags — skips p2p pre-validation
   // mode=02 (merchant), mc=0000 (generic MCC), tr=unique ref
   var txnRef = 'TXN' + Date.now() + Math.floor(Math.random() * 1000);
   var upiParams = 'pa=' + encodeURIComponent(vpa) +
+    '&pn=' + encodeURIComponent(name) +
     '&am=' + parseFloat(am).toFixed(2) +
     '&cu=INR' +
     '&mode=02' +
@@ -55,6 +64,7 @@
     '#Intent;scheme=paytmmp;package=net.one97.paytm;end';
 
   document.getElementById('amt').textContent = '₹' + am;
+  document.getElementById('name').textContent = name;
   document.getElementById('vpa').textContent = vpa;
 
   document.getElementById('btnChat').addEventListener('click', function() {
