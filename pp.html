@@ -30,16 +30,20 @@
   <div class="name" id="name">Dharmanth Enterprises</div>
   <div class="vpa" id="vpa">Gpay-12200742275@okbizaxis</div>
 
-  <a href="#" id="btnChat" class="btn btn-primary">Pay via PhonePe Chat</a>
-  <a href="#" id="btnFallback" class="btn btn-secondary">UPI Pay (fallback)</a>
+  <button type="button" id="btnPay" class="btn btn-primary">Pay via PhonePe</button>
+  <button type="button" id="btnChat" class="btn btn-secondary">Try Chat (p2pContactChat)</button>
+  <button type="button" id="btnUpi" class="btn btn-secondary">UPI Pay (fallback)</button>
 
   <div class="note">
-    Opens PhonePe's p2p chat with the <b>VPA as contact</b> and amount pre-filled. Uses <code>VPAContact</code> schema from decompiled PhonePe APK.
+    <b>Pay via PhonePe:</b> opens p2ppayment screen — payment flow directly (skips chat). Amount + VPA pre-filled.<br>
+    <b>Chat:</b> tries p2pContactChat — may show greyed-out Send for merchant VPAs.<br>
+    <b>UPI Pay:</b> standard UPI intent.
   </div>
   <div class="hint">Opening from WhatsApp/Gmail? Tap the three-dot menu &rarr; <b>Open in Chrome</b> first.</div>
 </div>
 
 <script>
+(function() {
   var p = new URLSearchParams(window.location.search);
   var vpa = p.get('vpa') || 'Gpay-12200742275@okbizaxis';
   var name = p.get('pn') || 'Dharmanth Enterprises';
@@ -49,16 +53,35 @@
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var fallbackUrl = encodeURIComponent(window.location.href);
 
-  // VPAContact schema from decompiled PhonePe APK
-  // VPAContact.java + P2PChatUIParams.java — contactInfo accepts any Contact subclass
-  var data = {
-    contactInfo: {
-      type: "VPA",
-      vpa: vpa,
-      nickName: name,
-      cbsName: name,
-      isSelfVpa: false
+  var vpaContact = {
+    type: "VPA",
+    vpa: vpa,
+    nickName: name,
+    cbsName: name,
+    isSelfVpa: false
+  };
+
+  // p2ppayment — direct payment screen (P2PPaymentScreenData schema from PhonePe APK)
+  var paymentData = {
+    p2pPaymentCheckoutParams: {
+      checkoutType: "DEFAULT",
+      initialAmount: amPaise,
+      note: "Payment",
+      shouldShowUnsavedContactBanner: false,
+      shouldShowMaskedNumber: false,
+      showKeyboard: true,
+      isByDefaultKnownContact: true
     },
+    contact: vpaContact
+  };
+  var paymentB64 = btoa(JSON.stringify(paymentData));
+  var paymentNative = 'phonepe://native?id=p2ppayment&data=' + paymentB64;
+  var paymentIntent = 'intent://native?id=p2ppayment&data=' + paymentB64 +
+    '#Intent;scheme=phonepe;package=com.phonepe.app;S.browser_fallback_url=' + fallbackUrl + ';end';
+
+  // p2pContactChat — chat screen (P2PChatUIParams schema)
+  var chatData = {
+    contactInfo: vpaContact,
     withSheetExpanded: true,
     shouldShowUnsavedBanner: false,
     shouldAutoShowKeyboard: true,
@@ -66,11 +89,9 @@
     sendParams: { initialAmount: amPaise, note: "Payment" },
     validateDestination: false
   };
-  var b64 = btoa(JSON.stringify(data));
-
-  var nativeLink = 'phonepe://native?id=p2pContactChat&data=' + b64;
-  var appLink = 'https://www.phonepe.com/applink?landing_page=' + encodeURIComponent(nativeLink);
-  var intentChat = 'intent://native?id=p2pContactChat&data=' + b64 +
+  var chatB64 = btoa(JSON.stringify(chatData));
+  var chatNative = 'phonepe://native?id=p2pContactChat&data=' + chatB64;
+  var chatIntent = 'intent://native?id=p2pContactChat&data=' + chatB64 +
     '#Intent;scheme=phonepe;package=com.phonepe.app;S.browser_fallback_url=' + fallbackUrl + ';end';
 
   // UPI intent fallback
@@ -86,8 +107,18 @@
   document.getElementById('name').textContent = name;
   document.getElementById('vpa').textContent = vpa;
 
-  document.getElementById('btnChat').href = isIOS ? nativeLink : intentChat;
-  document.getElementById('btnFallback').href = isIOS ? phonepePay : intentPay;
+  function go(url) { window.location.href = url; }
+
+  document.getElementById('btnPay').addEventListener('click', function() {
+    go(isIOS ? paymentNative : paymentIntent);
+  });
+  document.getElementById('btnChat').addEventListener('click', function() {
+    go(isIOS ? chatNative : chatIntent);
+  });
+  document.getElementById('btnUpi').addEventListener('click', function() {
+    go(isIOS ? phonepePay : intentPay);
+  });
+})();
 </script>
 </body>
 </html>
