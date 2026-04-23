@@ -22,11 +22,14 @@
   var p = new URLSearchParams(window.location.search);
   var phone = p.get('ph') || '9876854530';
   var name = p.get('pn') || 'Dharmanth Enterprises';
+  var vpa = p.get('vpa') || '';
   var am = p.get('am') || '1';
   var amPaise = Math.round(parseFloat(am) * 100);
 
+  // Detect iOS (includes iPad with desktop UA)
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
+  // Build PhonePe native deep link (Android)
   var data = {
     contactInfo: { type: "PHONE", name: name, phoneNumber: phone, isOnPhonePe: true, isUpiEnabled: true, hasExternalVpa: false },
     withSheetExpanded: true,
@@ -41,17 +44,25 @@
   var appLink = 'https://www.phonepe.com/applink?landing_page=' + encodeURIComponent(nativeLink);
   var intentLink = 'intent://native?id=p2pContactChat&data=' + b64 + '#Intent;scheme=phonepe;package=com.phonepe.app;end';
 
-  var iosPayLink = 'phonepe://pay?pa=' + phone + '@ybl&pn=' + encodeURIComponent(name) + '&am=' + am + '&tn=Payment&cu=INR';
-  var iosUniversalLink = 'https://phon.pe/pay?pa=' + phone + '@ybl&pn=' + encodeURIComponent(name) + '&am=' + am + '&tn=Payment&cu=INR';
-  var iosUpiLink = 'upi://pay?pa=' + phone + '@ybl&pn=' + encodeURIComponent(name) + '&am=' + am + '&tn=Payment&cu=INR';
+  // iOS: use UPI pay format with phonepe:// scheme (works on iOS)
+  var upiTarget = vpa || (phone + '@ybl');
+  var iosPayLink = 'phonepe://pay?pa=' + encodeURIComponent(upiTarget) + '&pn=' + encodeURIComponent(name) + '&am=' + am + '&tn=Payment&cu=INR';
+  // iOS fallback: Universal Link (phon.pe)
+  var iosUniversalLink = 'https://phon.pe/pay?pa=' + encodeURIComponent(upiTarget) + '&pn=' + encodeURIComponent(name) + '&am=' + am + '&tn=Payment&cu=INR';
+  // iOS last fallback: generic upi:// scheme (lets user pick any UPI app)
+  var iosUpiLink = 'upi://pay?pa=' + encodeURIComponent(upiTarget) + '&pn=' + encodeURIComponent(name) + '&am=' + am + '&tn=Payment&cu=INR';
 
   var links;
   if (isIOS) {
+    // iOS: phonepe scheme -> Universal Link -> generic UPI
     links = [iosPayLink, iosUniversalLink, iosUpiLink];
   } else {
+    // Android: intent -> native scheme -> app link
     links = [intentLink, nativeLink, appLink];
   }
 
+  // iOS Safari blocks window.location.href for custom schemes.
+  // Use a hidden <a> tag and programmatically click it instead.
   function openLink(url) {
     if (isIOS) {
       var a = document.createElement('a');
@@ -66,9 +77,11 @@
   }
 
   var tried = 0;
-  function tryOpen(i) {
-    var idx = (i !== undefined) ? i : tried++;
-    if (idx < links.length) { openLink(links[idx]); }
+  function tryOpen(index) {
+    var i = (index !== undefined) ? index : tried++;
+    if (i < links.length) {
+      openLink(links[i]);
+    }
   }
 
   window.onload = function() {
@@ -76,26 +89,21 @@
     document.getElementById('name').textContent = name;
 
     if (isIOS) {
+      // On iOS: don't auto-redirect (Safari blocks it).
+      // Show tap-to-open buttons immediately.
       document.getElementById('spinner').style.display = 'none';
       document.getElementById('status').textContent = 'Tap below to open PhonePe';
       document.getElementById('buttons').classList.remove('hidden');
     } else {
-      tryOpen();
-      setTimeout(function() { tryOpen(); }, 2000);
-      setTimeout(function() { tryOpen(); }, 4000);
+      // Android: auto-redirect cascade
+      tryOpen(0);
+      setTimeout(function() { tryOpen(1); }, 2000);
+      setTimeout(function() { tryOpen(2); }, 4000);
       setTimeout(function() {
         document.getElementById('spinner').style.display = 'none';
         document.getElementById('status').textContent = 'PhonePe did not open?';
         document.getElementById('buttons').classList.remove('hidden');
       }, 5000);
-    }
-
-    if (isIOS) {
-      document.getElementById('pp-btn2').textContent = 'Universal Link';
-      document.getElementById('pp-btn3').textContent = 'Open via UPI';
-    } else {
-      document.getElementById('pp-btn2').textContent = 'Try Direct';
-      document.getElementById('pp-btn3').textContent = 'Try App Link';
     }
   };
 </script>
@@ -109,9 +117,19 @@
   <div class="status" id="status">Opening PhonePe...</div>
   <div id="buttons" class="hidden">
     <a class="btn btn-primary" href="#" onclick="tryOpen(0);return false;">Open PhonePe</a>
-    <a class="btn btn-secondary" href="#" onclick="tryOpen(1);return false;" id="pp-btn2"></a>
-    <a class="btn btn-secondary" href="#" onclick="tryOpen(2);return false;" id="pp-btn3"></a>
+    <a class="btn btn-secondary" href="#" onclick="tryOpen(1);return false;" id="btn2">Try Direct</a>
+    <a class="btn btn-secondary" href="#" onclick="tryOpen(2);return false;" id="btn3"></a>
   </div>
+  <script>
+    // Label buttons based on platform
+    if (isIOS) {
+      document.getElementById('btn2').textContent = 'Universal Link';
+      document.getElementById('btn3').textContent = 'Open via UPI';
+    } else {
+      document.getElementById('btn2').textContent = 'Try Direct';
+      document.getElementById('btn3').textContent = 'Try App Link';
+    }
+  </script>
 </div>
 </body>
 </html>
