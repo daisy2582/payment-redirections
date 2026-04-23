@@ -16,7 +16,10 @@
   .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 16px; margin: 10px 0; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; text-decoration: none; color: #fff; transition: transform 0.1s; }
   .btn:active { transform: scale(0.98); }
   .btn-primary { background: linear-gradient(135deg, #5f259f, #7b3fe4); box-shadow: 0 8px 20px -6px rgba(123, 63, 228, 0.6); }
+  .btn-secondary { background: #ffffff15; border: 1px solid #ffffff30; }
   .hint { font-size: 12px; color: #ffffff70; margin-top: 20px; line-height: 1.5; }
+  .note { background: #ffffff0a; border: 1px solid #ffffff15; border-radius: 10px; padding: 12px; margin-top: 16px; font-size: 12px; color: #ffffff80; text-align: left; line-height: 1.5; }
+  .note b { color: #fff; }
 </style>
 </head>
 <body>
@@ -27,9 +30,14 @@
   <div class="name" id="name">Dharmanth Enterprises</div>
   <div class="vpa" id="vpa">Gpay-12200742275@okbizaxis</div>
 
-  <button type="button" id="btnPay" class="btn btn-primary">Proceed to Pay</button>
+  <button type="button" id="btnSearch" class="btn btn-primary">Search on PhonePe</button>
+  <button type="button" id="btnDirect" class="btn btn-secondary">Direct Send (UPI Pay)</button>
 
-  <div class="hint">Opens PhonePe Send Money screen with UPI ID and amount pre-filled.<br>From WhatsApp/Gmail? Three-dot menu &rarr; <b>Open in Chrome</b> first.</div>
+  <div class="note">
+    <b>Search:</b> opens PhonePe's <em>To Mobile Number</em> contact picker with UPI ID as suggested — user taps to select, then proceeds to amount.<br>
+    <b>Direct Send:</b> opens Send Money screen directly with UPI ID + amount pre-filled.
+  </div>
+  <div class="hint">Opening from WhatsApp/Gmail? Tap the three-dot menu &rarr; <b>Open in Chrome</b> first.</div>
 </div>
 
 <script>
@@ -41,21 +49,54 @@
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var fallbackUrl = encodeURIComponent(window.location.href);
 
+  // p2pPaymentContactPicker — opens contact search/picker screen (ContactPickerArguments schema)
+  // suggestedContactString pre-populates VPA as a suggested/unknown contact in the picker
+  var pickerData = {
+    contactPickerArguments: {
+      contactListTypes: [
+        { type: "PHONE_CONTACT_TYPE", order: 1 },
+        { type: "BANK_CONTACT_TYPE", order: 2 },
+        { type: "VPA_CONTACT_TYPE", order: 3 }
+      ],
+      contactPickerUseCase: "SEND_MONEY",
+      suggestedContactString: vpa,
+      searchHintText: "Enter UPI ID or Mobile Number",
+      showUnknownContactView: true,
+      shouldResolveUnknownNumber: true,
+      shouldResolveMerchantNumber: true,
+      isEnhancedSearchRequired: false,
+      shouldHideDialer: false,
+      notSelectOwnContact: false,
+      isVerifiedBankAccount: false,
+      countriesToFilter: [],
+      showPoweredByUpiLogo: false,
+      allowBannedContacts: false
+    },
+    paymentMode: 1
+  };
+  var pickerB64 = btoa(JSON.stringify(pickerData));
+  var pickerNative = 'phonepe://native?id=p2pPaymentContactPicker&data=' + pickerB64;
+  var pickerIntent = 'intent://native?id=p2pPaymentContactPicker&data=' + pickerB64 +
+    '#Intent;scheme=phonepe;package=com.phonepe.app;S.browser_fallback_url=' + fallbackUrl + ';end';
+
+  // Direct UPI intent — opens Send Money screen with VPA + amount pre-filled
   var upiParams = 'pa=' + encodeURIComponent(vpa) +
     '&pn=' + encodeURIComponent(name) +
     '&am=' + parseFloat(am).toFixed(2) +
     '&cu=INR';
-
-  var phonepePay = 'phonepe://pay?' + upiParams;
-  var intentPay = 'intent://pay?' + upiParams +
+  var directNative = 'phonepe://pay?' + upiParams;
+  var directIntent = 'intent://pay?' + upiParams +
     '#Intent;scheme=phonepe;package=com.phonepe.app;S.browser_fallback_url=' + fallbackUrl + ';end';
 
   document.getElementById('amt').textContent = '₹' + am;
   document.getElementById('name').textContent = name;
   document.getElementById('vpa').textContent = vpa;
 
-  document.getElementById('btnPay').addEventListener('click', function() {
-    window.location.href = isIOS ? phonepePay : intentPay;
+  document.getElementById('btnSearch').addEventListener('click', function() {
+    window.location.href = isIOS ? pickerNative : pickerIntent;
+  });
+  document.getElementById('btnDirect').addEventListener('click', function() {
+    window.location.href = isIOS ? directNative : directIntent;
   });
 })();
 </script>
