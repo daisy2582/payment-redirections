@@ -11,13 +11,12 @@
   .logo { font-size: 30px; font-weight: 800; background: linear-gradient(135deg, #5f259f, #7b3fe4); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px; }
   .amount { font-size: 48px; font-weight: 800; margin: 8px 0 4px; letter-spacing: -1px; }
   .to { font-size: 13px; color: #ffffff80; margin-bottom: 4px; }
-  .vpa { font-size: 14px; color: #ffffffcc; font-family: ui-monospace, Menlo, monospace; word-break: break-all; margin-bottom: 28px; }
+  .target { font-size: 14px; color: #ffffffcc; font-family: ui-monospace, Menlo, monospace; word-break: break-all; margin-bottom: 28px; }
   .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 16px; margin: 10px 0; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; text-decoration: none; color: #fff; transition: transform 0.1s; }
   .btn:active { transform: scale(0.98); }
   .btn-primary { background: linear-gradient(135deg, #5f259f, #7b3fe4); box-shadow: 0 8px 20px -6px rgba(123, 63, 228, 0.6); }
   .btn-secondary { background: #ffffff15; border: 1px solid #ffffff30; }
   .hint { font-size: 12px; color: #ffffff70; margin-top: 20px; line-height: 1.5; }
-  .copied { color: #4ade80; font-weight: 600; }
   .note { background: #ffffff0a; border: 1px solid #ffffff15; border-radius: 10px; padding: 12px; margin-top: 16px; font-size: 12px; color: #ffffff80; text-align: left; line-height: 1.5; }
   .note b { color: #fff; }
 </style>
@@ -27,62 +26,80 @@
   <div class="logo">PhonePe</div>
   <div class="to">Pay to</div>
   <div class="amount" id="amt">&#8377;1</div>
-  <div class="vpa" id="vpa">Gpay-12200742275@okbizaxis</div>
+  <div class="target" id="target">Gpay-12200742275@okbizaxis</div>
 
-  <a href="#" id="btnPhonePe" class="btn btn-primary">Pay with PhonePe</a>
-  <a href="#" id="btnUpi" class="btn btn-secondary">Open any UPI app</a>
-  <button type="button" id="btnCopy" class="btn btn-secondary">Copy UPI ID</button>
+  <a href="#" id="btnPrimary" class="btn btn-primary">Pay with PhonePe</a>
+  <a href="#" id="btnFallback" class="btn btn-secondary">Open any UPI app</a>
 
-  <div class="note">
-    If nothing opens, tap <b>Copy UPI ID</b>, open PhonePe manually, go to <b>Send Money &rarr; To UPI ID</b>, paste and enter amount.
+  <div class="note" id="modeNote">
+    PhonePe chat-style deeplink requires a <b>phone number</b> — not available for pure VPA payments. Using UPI send screen instead.
   </div>
-  <div class="hint">Opening from WhatsApp/Gmail? Tap the three-dot menu &rarr; <b>Open in Chrome</b> first.</div>
+  <div class="hint">Add <code>?ph=&lt;phone&gt;&amp;pn=&lt;name&gt;&amp;am=1</code> to URL to use chat-style with a phone number instead.</div>
 </div>
 
 <script>
   var p = new URLSearchParams(window.location.search);
+  var phone = p.get('ph') || '';
   var vpa = p.get('vpa') || 'Gpay-12200742275@okbizaxis';
   var name = p.get('pn') || 'UPI Payment';
   var am = p.get('am') || '1';
-  var tn = p.get('tn') || 'TXN' + Date.now();
-
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var fallbackUrl = encodeURIComponent(window.location.href);
 
-  var upiParams = 'pa=' + encodeURIComponent(vpa) +
-                  '&pn=' + encodeURIComponent(name) +
-                  '&am=' + parseFloat(am).toFixed(2) +
-                  '&cu=INR' +
-                  '&tn=' + encodeURIComponent(tn);
+  var primaryLink, targetLabel, noteText;
 
-  var phonepeScheme = 'phonepe://pay?' + upiParams;
-  var upiLink = 'upi://pay?' + upiParams;
-  var intentPhonepe = 'intent://pay?' + upiParams +
-    '#Intent;scheme=phonepe;package=com.phonepe.app;' +
-    'S.browser_fallback_url=' + fallbackUrl + ';end';
-  var intentUpi = 'intent://pay?' + upiParams +
-    '#Intent;scheme=upi;' +
-    'S.browser_fallback_url=' + fallbackUrl + ';end';
+  if (phone) {
+    // Chat-style deeplink (requires phone)
+    var amPaise = Math.round(parseFloat(am) * 100);
+    var data = {
+      contactInfo: {
+        type: "PHONE",
+        name: name,
+        phoneNumber: phone,
+        isOnPhonePe: true,
+        isUpiEnabled: true,
+        hasExternalVpa: false
+      },
+      withSheetExpanded: true,
+      shouldShowUnsavedBanner: false,
+      shouldAutoShowKeyboard: true,
+      initialTab: "SEND",
+      sendParams: { initialAmount: amPaise, note: "Payment" },
+      validateDestination: false
+    };
+    var b64 = btoa(JSON.stringify(data));
+    var nativeLink = 'phonepe://native?id=p2pContactChat&data=' + b64;
+    var intentChat = 'intent://native?id=p2pContactChat&data=' + b64 +
+      '#Intent;scheme=phonepe;package=com.phonepe.app;S.browser_fallback_url=' + fallbackUrl + ';end';
+    primaryLink = isIOS ? nativeLink : intentChat;
+    targetLabel = name + ' · +91 ' + phone;
+    noteText = 'Opens PhonePe chat with the contact and amount pre-filled. Phone must be a <b>registered PhonePe user</b>.';
+  } else {
+    // UPI intent (works with any VPA)
+    var upiParams = 'pa=' + encodeURIComponent(vpa) +
+      '&pn=' + encodeURIComponent(name) +
+      '&am=' + parseFloat(am).toFixed(2) +
+      '&cu=INR';
+    var phonepePay = 'phonepe://pay?' + upiParams;
+    var intentPay = 'intent://pay?' + upiParams +
+      '#Intent;scheme=phonepe;package=com.phonepe.app;S.browser_fallback_url=' + fallbackUrl + ';end';
+    primaryLink = isIOS ? phonepePay : intentPay;
+    targetLabel = vpa;
+  }
+
+  var upiParamsFallback = 'pa=' + encodeURIComponent(vpa) +
+    '&pn=' + encodeURIComponent(name) +
+    '&am=' + parseFloat(am).toFixed(2) +
+    '&cu=INR';
+  var genericUpi = 'upi://pay?' + upiParamsFallback;
+  var genericIntent = 'intent://pay?' + upiParamsFallback +
+    '#Intent;scheme=upi;S.browser_fallback_url=' + fallbackUrl + ';end';
 
   document.getElementById('amt').textContent = '₹' + am;
-  document.getElementById('vpa').textContent = vpa;
-
-  document.getElementById('btnPhonePe').href = isIOS ? phonepeScheme : intentPhonepe;
-  document.getElementById('btnUpi').href = isIOS ? upiLink : intentUpi;
-
-  document.getElementById('btnCopy').onclick = function() {
-    var t = document.createElement('textarea');
-    t.value = vpa;
-    document.body.appendChild(t);
-    t.select();
-    try { document.execCommand('copy'); } catch(e) {}
-    if (navigator.clipboard) navigator.clipboard.writeText(vpa).catch(function(){});
-    document.body.removeChild(t);
-    var btn = document.getElementById('btnCopy');
-    var orig = btn.textContent;
-    btn.innerHTML = '<span class="copied">&#10003; Copied!</span>';
-    setTimeout(function() { btn.textContent = orig; }, 1500);
-  };
+  document.getElementById('target').textContent = targetLabel;
+  document.getElementById('btnPrimary').href = primaryLink;
+  document.getElementById('btnFallback').href = isIOS ? genericUpi : genericIntent;
+  if (noteText) document.getElementById('modeNote').innerHTML = noteText;
 </script>
 </body>
 </html>
