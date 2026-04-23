@@ -48,11 +48,12 @@
 
   var fallbackUrl = encodeURIComponent(window.location.href);
 
-  // Send Money to UPI ID — amount + VPA + name pre-filled (from decompiled QuickPaymentActivity.java)
+  // Send Money to UPI ID — amount + VPA + name pre-filled
+  // Format verified from decompiled QuickPaymentActivity.java line 147-151 (uses "am" not "amount")
   var directSendLink = 'paytmmp://cash_wallet?featuretype=money_transfer' +
     '&pa=' + encodeURIComponent(vpa) +
     '&pn=' + encodeURIComponent(name) +
-    '&amount=' + am;
+    '&am=' + am;
 
   // VPA Chat — may or may not resolve depending on VPA type (from DiscoverySearchProvider.java)
   var chatLink = 'paytmmp://chat?featuretype=start_chat' +
