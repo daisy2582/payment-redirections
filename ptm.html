@@ -11,14 +11,13 @@
   .logo { font-size: 30px; font-weight: 800; color: #00b9f5; margin-bottom: 20px; }
   .amount { font-size: 48px; font-weight: 800; margin: 8px 0 4px; letter-spacing: -1px; }
   .to { font-size: 13px; color: #ffffff80; margin-bottom: 4px; }
-  .target { font-size: 14px; color: #ffffffcc; font-family: ui-monospace, Menlo, monospace; word-break: break-all; margin-bottom: 28px; }
+  .name { font-size: 15px; color: #ffffffcc; font-weight: 600; margin-bottom: 4px; }
+  .vpa { font-size: 13px; color: #ffffff88; font-family: ui-monospace, Menlo, monospace; word-break: break-all; margin-bottom: 28px; }
   .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 16px; margin: 10px 0; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; text-decoration: none; color: #fff; transition: transform 0.1s; }
   .btn:active { transform: scale(0.98); }
   .btn-primary { background: #00b9f5; color: #00295e; box-shadow: 0 8px 20px -6px rgba(0, 185, 245, 0.5); }
   .btn-secondary { background: #ffffff15; border: 1px solid #ffffff30; color: #fff; }
   .hint { font-size: 12px; color: #ffffff70; margin-top: 20px; line-height: 1.5; }
-  .note { background: #ffffff0a; border: 1px solid #ffffff15; border-radius: 10px; padding: 12px; margin-top: 16px; font-size: 12px; color: #ffffff80; text-align: left; line-height: 1.5; }
-  .note b { color: #fff; }
 </style>
 </head>
 <body>
@@ -26,60 +25,57 @@
   <div class="logo">Paytm</div>
   <div class="to">Pay to</div>
   <div class="amount" id="amt">&#8377;1</div>
-  <div class="target" id="target">Gpay-12200742275@okbizaxis</div>
+  <div class="name" id="name">Dharmanth Enterprises</div>
+  <div class="vpa" id="vpa">Gpay-12200742275@okbizaxis</div>
 
-  <a href="#" id="btnPrimary" class="btn btn-primary">Send Money via Paytm</a>
-  <a href="#" id="btnChat" class="btn btn-secondary">Try VPA Chat</a>
-  <a href="#" id="btnUpi" class="btn btn-secondary">UPI Pay (fallback)</a>
+  <button type="button" id="btnChat" class="btn btn-primary">Pay via Paytm Chat</button>
+  <button type="button" id="btnChatAlt" class="btn btn-secondary">Try Alt Chat (Intent)</button>
 
-  <div class="note">
-    <b>Send Money:</b> opens Paytm's Send Money UPI screen — VPA and amount pre-filled.<br>
-    <b>VPA Chat:</b> tries Paytm's chat flow (may not work with merchant VPA).<br>
-    <b>UPI Pay:</b> standard UPI intent.
-  </div>
   <div class="hint">Opening from WhatsApp/Gmail? Tap the three-dot menu &rarr; <b>Open in Chrome</b> first.</div>
 </div>
 
 <script>
+(function() {
   var p = new URLSearchParams(window.location.search);
   var vpa = p.get('vpa') || 'Gpay-12200742275@okbizaxis';
   var name = p.get('pn') || 'Dharmanth Enterprises';
+  var phone = p.get('ph') || '';
   var am = p.get('am') || '1';
 
-  var fallbackUrl = encodeURIComponent(window.location.href);
+  // Auto-extract phone from VPA if 10-digit prefix
+  if (!phone) {
+    var vpaMatch = /^([6-9]\d{9})@/.exec(vpa);
+    if (vpaMatch) phone = vpaMatch[1];
+  }
 
-  // Send Money to UPI ID — amount + VPA + name pre-filled
-  // Format verified from decompiled QuickPaymentActivity.java line 147-151 (uses "am" not "amount")
-  var directSendLink = 'paytmmp://cash_wallet?featuretype=money_transfer' +
-    '&pa=' + encodeURIComponent(vpa) +
-    '&pn=' + encodeURIComponent(name) +
-    '&am=' + am;
+  // Phone-based chat if phone available, else VPA chat (schemas from decompiled Paytm APK)
+  var chatLink = phone
+    ? 'paytmmp://chat?featuretype=start_chat' +
+      '&phone=' + phone +
+      '&phoneName=' + encodeURIComponent(name) +
+      '&amount=' + am +
+      '&source=deeplink'
+    : 'paytmmp://chat?featuretype=start_chat' +
+      '&userType=VPA' +
+      '&vpa=' + encodeURIComponent(vpa) +
+      '&txnCategory=VPA2VPA' +
+      '&amount=' + am +
+      '&source=deeplink';
 
-  // VPA Chat — may or may not resolve depending on VPA type (from DiscoverySearchProvider.java)
-  var chatLink = 'paytmmp://chat?featuretype=start_chat' +
-    '&userType=VPA' +
-    '&vpa=' + encodeURIComponent(vpa) +
-    '&txnCategory=VPA2VPA' +
-    '&amount=' + am +
-    '&source=deeplink';
-
-  // UPI pay fallback
-  var upiParams = 'pa=' + encodeURIComponent(vpa) +
-    '&pn=' + encodeURIComponent(name) +
-    '&am=' + parseFloat(am).toFixed(2) +
-    '&cu=INR';
-  var paytmPay = 'paytmmp://pay?' + upiParams;
-  var intentPay = 'intent://pay?' + upiParams +
-    '#Intent;scheme=paytmmp;package=net.one97.paytm;S.browser_fallback_url=' + fallbackUrl + ';end';
+  var chatIntent = 'intent://chat?' + chatLink.split('?')[1] +
+    '#Intent;scheme=paytmmp;package=net.one97.paytm;end';
 
   document.getElementById('amt').textContent = '₹' + am;
-  document.getElementById('target').textContent = vpa;
+  document.getElementById('name').textContent = name;
+  document.getElementById('vpa').textContent = vpa;
 
-  document.getElementById('btnPrimary').href = directSendLink;
-  document.getElementById('btnChat').href = chatLink;
-
-  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  document.getElementById('btnUpi').href = isIOS ? paytmPay : intentPay;
+  document.getElementById('btnChat').addEventListener('click', function() {
+    window.location.href = chatLink;
+  });
+  document.getElementById('btnChatAlt').addEventListener('click', function() {
+    window.location.href = chatIntent;
+  });
+})();
 </script>
 </body>
 </html>

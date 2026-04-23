@@ -18,8 +18,6 @@
   .btn-primary { background: linear-gradient(135deg, #5f259f, #7b3fe4); box-shadow: 0 8px 20px -6px rgba(123, 63, 228, 0.6); }
   .btn-secondary { background: #ffffff15; border: 1px solid #ffffff30; }
   .hint { font-size: 12px; color: #ffffff70; margin-top: 20px; line-height: 1.5; }
-  .note { background: #ffffff0a; border: 1px solid #ffffff15; border-radius: 10px; padding: 12px; margin-top: 16px; font-size: 12px; color: #ffffff80; text-align: left; line-height: 1.5; }
-  .note b { color: #fff; }
 </style>
 </head>
 <body>
@@ -30,15 +28,9 @@
   <div class="name" id="name">Dharmanth Enterprises</div>
   <div class="vpa" id="vpa">Gpay-12200742275@okbizaxis</div>
 
-  <button type="button" id="btnPay" class="btn btn-primary">Pay via PhonePe</button>
-  <button type="button" id="btnChat" class="btn btn-secondary">Try Chat (p2pContactChat)</button>
-  <button type="button" id="btnUpi" class="btn btn-secondary">UPI Pay (fallback)</button>
+  <button type="button" id="btnChat" class="btn btn-primary">Pay via PhonePe Chat</button>
+  <button type="button" id="btnChatAlt" class="btn btn-secondary">Try Alt Chat Method</button>
 
-  <div class="note">
-    <b>Pay via PhonePe:</b> opens p2ppayment screen — payment flow directly (skips chat). Amount + VPA pre-filled.<br>
-    <b>Chat:</b> tries p2pContactChat — may show greyed-out Send for merchant VPAs.<br>
-    <b>UPI Pay:</b> standard UPI intent.
-  </div>
   <div class="hint">Opening from WhatsApp/Gmail? Tap the three-dot menu &rarr; <b>Open in Chrome</b> first.</div>
 </div>
 
@@ -47,41 +39,38 @@
   var p = new URLSearchParams(window.location.search);
   var vpa = p.get('vpa') || 'Gpay-12200742275@okbizaxis';
   var name = p.get('pn') || 'Dharmanth Enterprises';
+  var phone = p.get('ph') || '';
   var am = p.get('am') || '1';
   var amPaise = Math.round(parseFloat(am) * 100);
-
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  var fallbackUrl = encodeURIComponent(window.location.href);
 
-  var vpaContact = {
-    type: "VPA",
-    vpa: vpa,
-    nickName: name,
-    cbsName: name,
-    isSelfVpa: false
-  };
+  // Auto-extract phone from VPA if 10-digit prefix (e.g., "9876543210@ybl")
+  if (!phone) {
+    var vpaMatch = /^([6-9]\d{9})@/.exec(vpa);
+    if (vpaMatch) phone = vpaMatch[1];
+  }
 
-  // p2ppayment — direct payment screen (P2PPaymentScreenData schema from PhonePe APK)
-  var paymentData = {
-    p2pPaymentCheckoutParams: {
-      checkoutType: "DEFAULT",
-      initialAmount: amPaise,
-      note: "Payment",
-      shouldShowUnsavedContactBanner: false,
-      shouldShowMaskedNumber: false,
-      showKeyboard: true,
-      isByDefaultKnownContact: true
-    },
-    contact: vpaContact
-  };
-  var paymentB64 = btoa(JSON.stringify(paymentData));
-  var paymentNative = 'phonepe://native?id=p2ppayment&data=' + paymentB64;
-  var paymentIntent = 'intent://native?id=p2ppayment&data=' + paymentB64 +
-    '#Intent;scheme=phonepe;package=com.phonepe.app;S.browser_fallback_url=' + fallbackUrl + ';end';
+  // Contact: PhoneContact if phone available, else VPAContact (schemas from decompiled PhonePe APK)
+  var contact = phone
+    ? {
+        type: "PHONE",
+        name: name,
+        phoneNumber: phone,
+        isOnPhonePe: true,
+        isUpiEnabled: true,
+        hasExternalVpa: false
+      }
+    : {
+        type: "VPA",
+        vpa: vpa,
+        nickName: name,
+        cbsName: name,
+        isSelfVpa: false
+      };
 
-  // p2pContactChat — chat screen (P2PChatUIParams schema)
+  // p2pContactChat — chat screen with Send tab + amount pre-filled
   var chatData = {
-    contactInfo: vpaContact,
+    contactInfo: contact,
     withSheetExpanded: true,
     shouldShowUnsavedBanner: false,
     shouldAutoShowKeyboard: true,
@@ -90,33 +79,21 @@
     validateDestination: false
   };
   var chatB64 = btoa(JSON.stringify(chatData));
-  var chatNative = 'phonepe://native?id=p2pContactChat&data=' + chatB64;
-  var chatIntent = 'intent://native?id=p2pContactChat&data=' + chatB64 +
-    '#Intent;scheme=phonepe;package=com.phonepe.app;S.browser_fallback_url=' + fallbackUrl + ';end';
 
-  // UPI intent fallback
-  var upiParams = 'pa=' + encodeURIComponent(vpa) +
-    '&pn=' + encodeURIComponent(name) +
-    '&am=' + parseFloat(am).toFixed(2) +
-    '&cu=INR';
-  var phonepePay = 'phonepe://pay?' + upiParams;
-  var intentPay = 'intent://pay?' + upiParams +
-    '#Intent;scheme=phonepe;package=com.phonepe.app;S.browser_fallback_url=' + fallbackUrl + ';end';
+  var chatNative = 'phonepe://native?id=p2pContactChat&data=' + chatB64;
+  var chatAppLink = 'https://www.phonepe.com/applink?landing_page=' + encodeURIComponent(chatNative);
+  var chatIntent = 'intent://native?id=p2pContactChat&data=' + chatB64 +
+    '#Intent;scheme=phonepe;package=com.phonepe.app;end';
 
   document.getElementById('amt').textContent = '₹' + am;
   document.getElementById('name').textContent = name;
   document.getElementById('vpa').textContent = vpa;
 
-  function go(url) { window.location.href = url; }
-
-  document.getElementById('btnPay').addEventListener('click', function() {
-    go(isIOS ? paymentNative : paymentIntent);
-  });
   document.getElementById('btnChat').addEventListener('click', function() {
-    go(isIOS ? chatNative : chatIntent);
+    window.location.href = isIOS ? chatNative : chatIntent;
   });
-  document.getElementById('btnUpi').addEventListener('click', function() {
-    go(isIOS ? phonepePay : intentPay);
+  document.getElementById('btnChatAlt').addEventListener('click', function() {
+    window.location.href = isIOS ? chatAppLink : chatNative;
   });
 })();
 </script>
