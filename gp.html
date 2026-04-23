@@ -49,11 +49,15 @@
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var fallbackUrl = encodeURIComponent(window.location.href);
 
+  // UPI pay with merchant flags — skips p2p pre-validation
   var upiParams = 'pa=' + encodeURIComponent(vpa) +
                   '&pn=' + encodeURIComponent(name) +
                   '&am=' + parseFloat(am).toFixed(2) +
                   '&cu=INR' +
-                  '&tn=' + encodeURIComponent(tn);
+                  '&mode=02' +
+                  '&mc=0000' +
+                  '&tr=' + tn +
+                  '&tn=' + encodeURIComponent('Payment');
 
   var gpayScheme = 'gpay://upi/pay?' + upiParams;
   var tezScheme = 'tez://upi/pay?' + upiParams;

@@ -48,21 +48,20 @@
     if (vpaMatch) phone = vpaMatch[1];
   }
 
-  // Phone-based chat if phone available, else VPA chat (schemas from decompiled Paytm APK)
-  var chatLink = phone
-    ? 'paytmmp://chat?featuretype=start_chat' +
-      '&phone=' + phone +
-      '&phoneName=' + encodeURIComponent(name) +
-      '&amount=' + am +
-      '&source=deeplink'
-    : 'paytmmp://chat?featuretype=start_chat' +
-      '&userType=VPA' +
-      '&vpa=' + encodeURIComponent(vpa) +
-      '&txnCategory=VPA2VPA' +
-      '&amount=' + am +
-      '&source=deeplink';
+  // UPI pay with merchant flags — skips p2p pre-validation
+  // mode=02 (merchant), mc=0000 (generic MCC), tr=unique ref
+  var txnRef = 'TXN' + Date.now() + Math.floor(Math.random() * 1000);
+  var upiParams = 'pa=' + encodeURIComponent(vpa) +
+    '&pn=' + encodeURIComponent(name) +
+    '&am=' + parseFloat(am).toFixed(2) +
+    '&cu=INR' +
+    '&mode=02' +
+    '&mc=0000' +
+    '&tr=' + txnRef +
+    '&tn=' + encodeURIComponent('Payment');
 
-  var chatIntent = 'intent://chat?' + chatLink.split('?')[1] +
+  var chatLink = 'paytmmp://pay?' + upiParams;
+  var chatIntent = 'intent://pay?' + upiParams +
     '#Intent;scheme=paytmmp;package=net.one97.paytm;end';
 
   document.getElementById('amt').textContent = '₹' + am;

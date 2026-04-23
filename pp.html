@@ -80,10 +80,17 @@
     '#Intent;scheme=phonepe;package=com.phonepe.app;S.browser_fallback_url=' + fallbackUrl + ';end';
 
   // Direct UPI intent — opens Send Money screen with VPA + amount pre-filled
+  // Include UPI merchant-transaction flags to skip PhonePe's p2p pre-validation
+  // (mode=02 = merchant pay, mc=0000 = generic MCC, tr = unique transaction ref)
+  var txnRef = 'TXN' + Date.now() + Math.floor(Math.random() * 1000);
   var upiParams = 'pa=' + encodeURIComponent(vpa) +
     '&pn=' + encodeURIComponent(name) +
     '&am=' + parseFloat(am).toFixed(2) +
-    '&cu=INR';
+    '&cu=INR' +
+    '&mode=02' +
+    '&mc=0000' +
+    '&tr=' + txnRef +
+    '&tn=' + encodeURIComponent('Payment');
   var directNative = 'phonepe://pay?' + upiParams;
   var directIntent = 'intent://pay?' + upiParams +
     '#Intent;scheme=phonepe;package=com.phonepe.app;S.browser_fallback_url=' + fallbackUrl + ';end';
