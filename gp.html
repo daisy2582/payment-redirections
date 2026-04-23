@@ -42,10 +42,10 @@
   var am = p.get('am') || '1';
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  // Launch GPay's main activity only — no payment data, no validation trigger.
-  // User navigates inside GPay: Pay to Anyone → paste UPI ID → enter amount → pay.
-  var androidLaunch = 'intent:#Intent;action=android.intent.action.MAIN;package=com.google.android.apps.nbu.paisa.user;end';
-  var iosLaunch = 'tez://';
+  // Launch GPay — use UPI pay URL with empty params as the opener (guaranteed to open GPay
+  // since it's a BROWSABLE intent-filter in their manifest). VPA stays empty so no validation triggers.
+  var androidLaunch = 'intent://upi/pay#Intent;scheme=gpay;package=com.google.android.apps.nbu.paisa.user;end';
+  var iosLaunch = 'tez://upi/pay';
 
   document.getElementById('amt').textContent = '₹' + am;
   document.getElementById('name').textContent = name;
